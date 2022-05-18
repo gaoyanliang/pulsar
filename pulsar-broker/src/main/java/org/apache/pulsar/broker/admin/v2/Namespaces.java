@@ -784,19 +784,27 @@ public class Namespaces extends NamespacesBase {
     @Path("/{tenant}/{namespace}/subscribeRate")
     @ApiOperation(value = "Delete subscribe-rate throttling for all topics of the namespace")
     @ApiResponses(value = { @ApiResponse(code = 403, message = "Don't have admin permission") })
-    public void deleteSubscribeRate(@PathParam("tenant") String tenant, @PathParam("namespace") String namespace) {
+    public void deleteSubscribeRate(@Suspended AsyncResponse asyncResponse, @PathParam("tenant") String tenant, @PathParam("namespace") String namespace) {
         validateNamespaceName(tenant, namespace);
-        internalDeleteSubscribeRate();
+        internalDeleteSubscribeRateAsync().thenAccept(asyncResponse::resume).exceptionally(ex -> {
+            log.error("Failed to delete the subscribeRate for cluster on namespace {}", namespaceName, ex);
+            resumeAsyncResponseExceptionally(asyncResponse, ex);
+            return null;
+        });
     }
 
     @POST
     @Path("/{tenant}/{namespace}/subscribeRate")
     @ApiOperation(value = "Set subscribe-rate throttling for all topics of the namespace")
     @ApiResponses(value = { @ApiResponse(code = 403, message = "Don't have admin permission") })
-    public void setSubscribeRate(@PathParam("tenant") String tenant, @PathParam("namespace") String namespace,
+    public void setSubscribeRate(@Suspended AsyncResponse asyncResponse, @PathParam("tenant") String tenant, @PathParam("namespace") String namespace,
             @ApiParam(value = "Subscribe rate for all topics of the specified namespace") SubscribeRate subscribeRate) {
         validateNamespaceName(tenant, namespace);
-        internalSetSubscribeRate(subscribeRate);
+        internalSetSubscribeRateAsync(subscribeRate).thenAccept(asyncResponse::resume).exceptionally(ex -> {
+            log.error("Failed to delete the subscribeRate for cluster on namespace {}", namespaceName, ex);
+            resumeAsyncResponseExceptionally(asyncResponse, ex);
+            return null;
+        });
     }
 
     @GET
@@ -804,10 +812,16 @@ public class Namespaces extends NamespacesBase {
     @ApiOperation(value = "Get subscribe-rate configured for the namespace")
     @ApiResponses(value = { @ApiResponse(code = 403, message = "Don't have admin permission"),
             @ApiResponse(code = 404, message = "Namespace does not exist") })
-    public SubscribeRate getSubscribeRate(@PathParam("tenant") String tenant,
+    public void getSubscribeRate(@Suspended AsyncResponse asyncResponse, @PathParam("tenant") String tenant,
                                         @PathParam("namespace") String namespace) {
         validateNamespaceName(tenant, namespace);
-        return internalGetSubscribeRate();
+        internalGetSubscribeRateAsync()
+                .thenAccept(asyncResponse::resume)
+                .exceptionally(ex -> {
+                    log.error("Failed to get subscribe rate for namespace {}", namespaceName, ex);
+                    resumeAsyncResponseExceptionally(asyncResponse, ex);
+                    return null;
+                });
     }
 
     @DELETE
